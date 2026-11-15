@@ -1,0 +1,570 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Logic Gate and Boolean Expression Simulator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout concept: a lab worksheet. Three tabs, one working panel at a time.
+   Schematic on a dotted drawing field on the left, truth table on the right. */
+:root{
+  --bg:#edf2f6; --surface:#ffffff; --ink:#12202c; --muted:#526473; --line:#d2dce4;
+  --hi:#087f92; --on-hi:#ffffff; --lo:#7f92a2; --lo-bg:#e3eaf0;
+  --accent:#c4195f; --cur:#dcf1f4;
+  --ok:#12803f; --ok-bg:#e2f5e9; --bad:#c2362f; --bad-bg:#fde8e6;
+  --display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0c1520; --surface:#142130; --ink:#e7eff6; --muted:#98abbc; --line:#27394b;
+    --hi:#38d6ea; --on-hi:#04222a; --lo:#5f7690; --lo-bg:#1f3042;
+    --accent:#ff5fa6; --cur:#153c47;
+    --ok:#43d987; --ok-bg:#13352a; --bad:#ff7f76; --bad-bg:#3b1f22;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0c1520; --surface:#142130; --ink:#e7eff6; --muted:#98abbc; --line:#27394b;
+  --hi:#38d6ea; --on-hi:#04222a; --lo:#5f7690; --lo-bg:#1f3042;
+  --accent:#ff5fa6; --cur:#153c47;
+  --ok:#43d987; --ok-bg:#13352a; --bad:#ff7f76; --bad-bg:#3b1f22;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:15px/1.55 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:28px 56px;
+}
+.wrap{max-width:1040px;margin:0 auto}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{font:700 clamp(26px,5vw,38px)/1.1 var(--display);letter-spacing:-.01em;margin:12px 0 10px;text-wrap:balance}
+.lede{color:var(--muted);max-width:64ch;margin:0}
+.tabs{display:flex;gap:4px;margin-top:26px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{appearance:none;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-1px;
+  color:var(--muted);font:600 15px var(--display);padding:12px 14px;cursor:pointer;white-space:nowrap}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+
+main{margin-top:24px}
+main>section{display:flex;flex-direction:column;gap:20px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px;min-width:0}
+.stack{display:flex;flex-direction:column;gap:16px}
+.grid2{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:780px){.grid2{grid-template-columns:minmax(0,1fr)}}
+h2{font:700 18px/1.25 var(--display);margin:0;text-wrap:balance}
+.sub{margin:0;color:var(--muted);max-width:66ch}
+.lbl{display:block;font:600 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:600 13px var(--mono);padding:9px 12px;min-height:40px;border:1px solid var(--line);background:var(--surface);
+  color:var(--ink);border-radius:6px;cursor:pointer}
+.chip:hover{border-color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip.ex{font-weight:500;text-align:left}
+
+.sws{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.sw{display:flex;align-items:center;gap:12px;padding:6px 8px 6px 14px;min-height:46px;border:1.5px solid var(--line);
+  background:var(--surface);border-radius:8px;color:var(--ink);font:600 15px var(--mono);cursor:pointer}
+.sw .v{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:6px;background:var(--lo-bg);color:var(--ink)}
+.sw[aria-pressed="true"]{border-color:var(--hi)}
+.sw[aria-pressed="true"] .v{background:var(--hi);color:var(--on-hi)}
+.btn{font:600 14px var(--display);padding:0 16px;min-height:46px;border-radius:8px;border:1.5px solid var(--ink);
+  background:var(--ink);color:var(--bg);cursor:pointer}
+.btn.ghost{background:var(--surface);color:var(--ink)}
+
+.svgbox{border-radius:8px;border:1px solid var(--line);background-color:var(--bg);
+  background-image:radial-gradient(var(--line) 1px,transparent 1.2px);background-size:16px 16px;padding:8px}
+.svgbox svg{display:block;width:100%;height:auto}
+.wire{fill:none;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;transition:stroke .18s}
+.wire.hi{stroke:var(--hi)} .wire.lo{stroke:var(--lo)}
+.jd{transition:fill .18s} .jd.hi{fill:var(--hi)} .jd.lo{fill:var(--lo)}
+.g{fill:var(--surface);stroke:var(--ink);stroke-width:2.5;stroke-linejoin:round}
+.gx{fill:none;stroke:var(--ink);stroke-width:2.5;stroke-linecap:round}
+.lamp{stroke:var(--ink);stroke-width:2;transition:fill .18s} .lamp.on{fill:var(--hi)} .lamp.off{fill:var(--lo-bg)}
+.lampt{font:700 16px var(--mono);text-anchor:middle;dominant-baseline:central}
+.lampt.on{fill:var(--on-hi)} .lampt.off{fill:var(--ink)}
+.svgt{font:700 14px var(--mono);fill:var(--ink)}
+.svgm{font:500 12px var(--mono);fill:var(--muted)}
+
+.gdesc{margin:0}
+.gexpr{margin:0;font:700 20px var(--mono);color:var(--ink)}
+.note{margin:0;color:var(--muted);font-size:14px}
+
+.tt-wrap{overflow-x:auto}
+table.tt{border-collapse:collapse;width:100%;font:500 14px var(--mono);font-variant-numeric:tabular-nums}
+.tt th{font-weight:600;color:var(--muted);font-size:12.5px;padding:8px;border-bottom:1.5px solid var(--ink);text-align:center;white-space:nowrap}
+.tt td{padding:8px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+.tt td.one{color:var(--hi);font-weight:700}
+.tt td.zero{color:var(--muted)}
+.tt td.idx{color:var(--muted);font-size:12px}
+.tt td.okc{color:var(--ok);font-weight:700}
+.tt td.badc{color:var(--bad);font-weight:700}
+.tt .sep{border-left:1.5px solid var(--line)}
+.tt tr.cur td{background:var(--cur)}
+.tt tr.bad td{background:var(--bad-bg)}
+
+.readout{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;font:500 14px var(--mono)}
+.readout b{font-weight:700}
+.readout .eqok{color:var(--ok);font-weight:700}
+
+.exin{width:100%;font:500 20px var(--mono);padding:14px 16px;border:1.5px solid var(--line);border-radius:8px;
+  background:var(--surface);color:var(--ink)}
+.exin:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--cur)}
+.keys{display:flex;flex-wrap:wrap;gap:6px}
+.key{font:600 17px var(--mono);min-width:46px;min-height:44px;padding:0 12px;border:1px solid var(--line);
+  border-radius:6px;background:var(--surface);color:var(--ink);cursor:pointer}
+.key:hover{border-color:var(--ink)}
+.hint{margin:0;color:var(--muted);font-size:13.5px;max-width:78ch}
+.hint code{font:500 13px var(--mono);color:var(--ink)}
+
+.verdict{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:8px;border:1px solid var(--line);background:var(--surface);font-weight:500}
+.verdict .mk{font:700 18px/1.3 var(--mono)}
+.verdict.ok{border-color:var(--ok);background:var(--ok-bg)} .verdict.ok .mk{color:var(--ok)}
+.verdict.bad{border-color:var(--bad);background:var(--bad-bg)} .verdict.bad .mk{color:var(--bad)}
+.verdict.info{background:var(--cur);border-color:var(--hi)} .verdict.info .mk{color:var(--hi)}
+.sop{margin:0;font:500 15px var(--mono);overflow-wrap:anywhere}
+
+footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+.team{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;list-style:none;padding:0;margin:12px 0 0}
+.team li{display:flex;flex-direction:column;gap:2px}
+.team b{color:var(--ink);font-weight:600;font-size:14px}
+.team span{font:500 12.5px var(--mono)}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Computer Organization</div>
+    <h1>Logic Gate and Boolean Expression Simulator</h1>
+    <p class="lede">Flip the inputs, watch the signal travel through the gates, and test De Morgan's theorem on a live circuit.</p>
+    <div class="tabs" role="tablist" aria-label="Simulator sections">
+      <button class="tab" role="tab" id="t-gates" data-tab="gates" aria-controls="p-gates" aria-selected="true">Logic gates</button>
+      <button class="tab" role="tab" id="t-de-morgan" data-tab="de-morgan" aria-controls="p-de-morgan" aria-selected="false">De Morgan's theorem</button>
+      <button class="tab" role="tab" id="t-expressions" data-tab="expressions" aria-controls="p-expressions" aria-selected="false">Expression checker</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- TAB 1: GATES -->
+    <section id="p-gates" role="tabpanel" aria-labelledby="t-gates">
+      <div class="grid2">
+        <div class="panel stack">
+          <div>
+            <span class="lbl">Choose a gate</span>
+            <div class="chips" id="gate-chips"></div>
+          </div>
+          <div>
+            <span class="lbl">Set the inputs</span>
+            <div class="sws">
+              <button class="sw" id="g-a" aria-pressed="true" aria-label="Input A"><span>A</span><span class="v">1</span></button>
+              <button class="sw" id="g-b" aria-pressed="true" aria-label="Input B"><span>B</span><span class="v">1</span></button>
+            </div>
+          </div>
+          <div class="svgbox"><svg id="g-svg" viewBox="0 0 360 150" role="img" aria-label="Gate diagram"></svg></div>
+          <div class="stack" id="g-info" style="gap:8px"></div>
+        </div>
+        <div class="panel stack">
+          <h2>Truth table</h2>
+          <div class="tt-wrap" id="g-tt"></div>
+          <p class="note">The highlighted row is the input combination you have set.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: DE MORGAN -->
+    <section id="p-de-morgan" role="tabpanel" aria-labelledby="t-de-morgan" hidden>
+      <div class="panel stack">
+        <h2>Invert the output, or invert the inputs and swap the gate</h2>
+        <p class="sub">De Morgan's theorem says an inverted AND behaves like an OR of inverted inputs, and an inverted OR behaves like an AND of inverted inputs. Set A and B. In each circuit below, the top path and the bottom path always give the same output.</p>
+        <div class="sws">
+          <button class="sw" id="dm-a" aria-pressed="true" aria-label="Input A"><span>A</span><span class="v">1</span></button>
+          <button class="sw" id="dm-b" aria-pressed="false" aria-label="Input B"><span>B</span><span class="v">0</span></button>
+          <button class="btn ghost" id="dm-play">Play all 4 cases</button>
+        </div>
+      </div>
+
+      <div class="panel stack">
+        <h2>Law 1: (A + B)′ = A′ · B′</h2>
+        <p class="sub">A NOR gate gives the same result as an AND gate fed by two inverted inputs.</p>
+        <div class="grid2">
+          <div>
+            <div class="svgbox"><svg id="dm1" viewBox="0 0 600 290" role="img" aria-label="Circuit for law 1"></svg></div>
+            <div class="readout" id="dm1-read"></div>
+          </div>
+          <div class="tt-wrap" id="dm1-tt"></div>
+        </div>
+      </div>
+
+      <div class="panel stack">
+        <h2>Law 2: (A · B)′ = A′ + B′</h2>
+        <p class="sub">A NAND gate gives the same result as an OR gate fed by two inverted inputs.</p>
+        <div class="grid2">
+          <div>
+            <div class="svgbox"><svg id="dm2" viewBox="0 0 600 290" role="img" aria-label="Circuit for law 2"></svg></div>
+            <div class="readout" id="dm2-read"></div>
+          </div>
+          <div class="tt-wrap" id="dm2-tt"></div>
+        </div>
+      </div>
+
+      <p class="note">Why it matters: with De Morgan's laws any AND-OR circuit can be rewritten using only NAND gates or only NOR gates, which is how many real chips are built.</p>
+    </section>
+
+    <!-- TAB 3: EXPRESSIONS -->
+    <section id="p-expressions" role="tabpanel" aria-labelledby="t-expressions" hidden>
+      <div class="panel stack">
+        <div>
+          <label class="lbl" for="ex-in">Boolean expression</label>
+          <input id="ex-in" class="exin" type="text" value="(A + B)' = A' · B'" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        </div>
+        <div class="keys" id="ex-keys" aria-label="Symbol keys"></div>
+        <p class="hint">Use letters A to Z as variables. AND: <code>·</code> <code>.</code> <code>*</code> <code>&amp;</code> or <code>AND</code>, or just write <code>AB</code>. OR: <code>+</code> <code>|</code> or <code>OR</code>. NOT: <code>′</code> after a term, or <code>!</code> <code>~</code> <code>NOT</code> before it. XOR: <code>⊕</code> <code>^</code> or <code>XOR</code>. Put <code>=</code> between two expressions to check whether they are equivalent.</p>
+        <div>
+          <span class="lbl">Try an example</span>
+          <div class="chips" id="ex-chips"></div>
+        </div>
+      </div>
+      <div id="ex-out" class="stack" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div>Project team · Computer Organization</div>
+    <ul class="team">
+      <li><b>Esaki Kesavan V</b><span>RA2511026010872</span></li>
+      <li><b>Dhanush kumar S</b><span>RA2511026010898</span></li>
+      <li><b>Hari haran R</b><span>RA2511026010911</span></li>
+    </ul>
+  </footer>
+</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const PR='′';
+
+/* ---------- gate symbols ---------- */
+const AND_B='M0 0H35A30 30 0 0 1 35 60H0Z';
+const OR_B='M0 0Q40 0 68 30Q40 60 0 60Q22 30 0 0Z';
+const XOR_B='M8 0Q48 0 76 30Q48 60 8 60Q30 30 8 0Z';
+const XOR_X='M0 0Q22 30 0 60';
+const SYM={
+  AND:{body:AND_B,tip:65,ins:[[0,15],[0,45]]},
+  NAND:{body:AND_B,tip:65,bub:1,ins:[[0,15],[0,45]]},
+  OR:{body:OR_B,tip:68,ins:[[8,15],[8,45]]},
+  NOR:{body:OR_B,tip:68,bub:1,ins:[[8,15],[8,45]]},
+  XOR:{body:XOR_B,extra:XOR_X,tip:76,ins:[[8,15],[8,45]]},
+  XNOR:{body:XOR_B,extra:XOR_X,tip:76,bub:1,ins:[[8,15],[8,45]]},
+  NOT:{body:'M0 5L0 55L55 30Z',tip:55,bub:1,ins:[[0,30]]}
+};
+function gate(type,x,y){
+  const s=SYM[type];
+  const svg='<g transform="translate('+x+' '+y+')"><path class="g" d="'+s.body+'"/>'+
+    (s.extra?'<path class="gx" d="'+s.extra+'"/>':'')+
+    (s.bub?'<circle class="g" cx="'+(s.tip+5)+'" cy="30" r="5"/>':'')+'</g>';
+  return {svg:svg,ins:s.ins.map(p=>[x+p[0],y+p[1]]),out:[x+s.tip+(s.bub?10:0),y+30]};
+}
+const wire=(pts,on)=>'<path class="wire '+(on?'hi':'lo')+'" d="M'+pts.map(p=>p[0]+' '+p[1]).join('L')+'"/>';
+const dot=(x,y,on)=>'<circle class="jd '+(on?'hi':'lo')+'" cx="'+x+'" cy="'+y+'" r="5"/>';
+const lamp=(x,y,v)=>'<circle class="lamp '+(v?'on':'off')+'" cx="'+x+'" cy="'+y+'" r="17"/><text class="lampt '+(v?'on':'off')+'" x="'+x+'" y="'+y+'">'+v+'</text>';
+const tx=(x,y,t,c,a)=>'<text class="'+(c||'svgt')+'" x="'+x+'" y="'+y+'"'+(a?' text-anchor="'+a+'"':'')+'>'+t+'</text>';
+const cell=(v)=>'<td class="'+(v?'one':'zero')+'">'+v+'</td>';
+
+/* ---------- TAB 1: gates ---------- */
+const FN={AND:(a,b)=>a&b,OR:(a,b)=>a|b,NAND:(a,b)=>1-(a&b),NOR:(a,b)=>1-(a|b),XOR:(a,b)=>a^b,XNOR:(a,b)=>1-(a^b),NOT:a=>1-a};
+const INFO={
+  AND:['Output is 1 only when every input is 1.','Y = A · B'],
+  OR:['Output is 1 when at least one input is 1.','Y = A + B'],
+  NOT:['Output is the opposite of the input.','Y = A'+PR],
+  NAND:['An AND followed by a NOT. Output is 0 only when both inputs are 1.','Y = (A · B)'+PR],
+  NOR:['An OR followed by a NOT. Output is 1 only when both inputs are 0.','Y = (A + B)'+PR],
+  XOR:['Output is 1 when the two inputs are different.','Y = A ⊕ B'],
+  XNOR:['Output is 1 when the two inputs are the same.','Y = (A ⊕ B)'+PR]
+};
+const G={gate:'AND',a:1,b:1};
+const gateNames=['AND','OR','NOT','NAND','NOR','XOR','XNOR'];
+function setSw(btn,val){btn.setAttribute('aria-pressed',val?'true':'false');btn.querySelector('.v').textContent=val;}
+
+function renderGates(){
+  const type=G.gate, one=type==='NOT';
+  const y=one?FN.NOT(G.a):FN[type](G.a,G.b);
+  const g=gate(type,140,45);
+  let w=wire([[56,g.ins[0][1]],g.ins[0]],G.a);
+  let lb=tx(30,g.ins[0][1]+5,'A');
+  if(!one){w+=wire([[56,g.ins[1][1]],g.ins[1]],G.b);lb+=tx(30,g.ins[1][1]+5,'B');}
+  w+=wire([g.out,[298,g.out[1]]],y);
+  $('#g-svg').innerHTML=w+g.svg+lb+lamp(316,g.out[1],y)+tx(316,g.out[1]+36,'Y','svgm','middle');
+  $('#g-svg').setAttribute('aria-label',type+' gate. Input A is '+G.a+(one?'':', input B is '+G.b)+'. Output is '+y+'.');
+  $('#g-b').hidden=one;
+  gateNames.forEach(n=>{const c=$('#gc-'+n);if(c)c.setAttribute('aria-pressed',n===type?'true':'false');});
+  const info=INFO[type];
+  $('#g-info').innerHTML='<p class="gdesc"><b>'+type+'.</b> '+info[0]+'</p><p class="gexpr">'+esc(info[1])+'</p>'+
+    ((type==='NAND'||type==='NOR')?'<p class="note">'+type+' is called a universal gate: every other gate can be built from '+type+' gates alone.</p>':'');
+  const rows=one?[[0],[1]]:[[0,0],[0,1],[1,0],[1,1]];
+  let h='<table class="tt"><thead><tr><th>A</th>'+(one?'':'<th>B</th>')+'<th class="sep">Y</th></tr></thead><tbody>';
+  rows.forEach(r=>{
+    const cur=one?(r[0]===G.a):(r[0]===G.a&&r[1]===G.b);
+    const o=one?FN.NOT(r[0]):FN[type](r[0],r[1]);
+    h+='<tr'+(cur?' class="cur"':'')+'>'+cell(r[0])+(one?'':cell(r[1]))+cell(o).replace('class="','class="sep ')+'</tr>';
+  });
+  $('#g-tt').innerHTML=h+'</tbody></table>';
+}
+(function initGates(){
+  const box=$('#gate-chips');
+  gateNames.forEach(n=>{
+    const b=document.createElement('button');
+    b.className='chip';b.id='gc-'+n;b.textContent=n;b.setAttribute('aria-pressed',n===G.gate?'true':'false');
+    b.addEventListener('click',()=>{G.gate=n;renderGates();});
+    box.appendChild(b);
+  });
+  $('#g-a').addEventListener('click',()=>{G.a=1-G.a;setSw($('#g-a'),G.a);renderGates();});
+  $('#g-b').addEventListener('click',()=>{G.b=1-G.b;setSw($('#g-b'),G.b);renderGates();});
+})();
+
+/* ---------- TAB 2: De Morgan ---------- */
+const DM={a:1,b:0,idx:2,timer:null};
+const LAWS=[
+  {id:'dm1',topGate:'OR',botGate:'AND',topLab:'A+B',topNot:'(A+B)'+PR,botLab:'A'+PR+'·B'+PR,top:(a,b)=>a|b,bot:(a,b)=>a&b},
+  {id:'dm2',topGate:'AND',botGate:'OR',topLab:'A·B',topNot:'(A·B)'+PR,botLab:'A'+PR+'+B'+PR,top:(a,b)=>a&b,bot:(a,b)=>a|b}
+];
+function renderLaw(c){
+  const a=DM.a,b=DM.b,na=1-a,nb=1-b;
+  const t=c.top(a,b),to=1-t,bo=c.bot(na,nb);
+  const T=gate(c.topGate,130,40),N=gate('NOT',250,40);
+  const NA=gate('NOT',130,130),NB=gate('NOT',130,200),BG=gate(c.botGate,270,170);
+  let w='';
+  w+=wire([[34,55],T.ins[0]],a)+wire([[34,85],T.ins[1]],b);
+  w+=wire([[60,55],[60,160],NA.ins[0]],a);
+  w+=wire([[90,85],[90,230],NB.ins[0]],b);
+  w+=wire([T.out,N.ins[0]],t)+wire([N.out,[450,70]],to);
+  w+=wire([NA.out,[232,160],[232,BG.ins[0][1]],BG.ins[0]],na);
+  w+=wire([NB.out,[232,230],[232,BG.ins[1][1]],BG.ins[1]],nb);
+  w+=wire([BG.out,[450,200]],bo);
+  let s=w+T.svg+N.svg+NA.svg+NB.svg+BG.svg;
+  s+=dot(60,55,a)+dot(90,85,b);
+  s+=tx(14,59,'A')+tx(14,89,'B');
+  s+=tx(130,26,'Left side: '+c.topNot,'svgm')+tx(130,118,'Right side: '+c.botLab,'svgm');
+  s+=tx((T.out[0]+250)/2,62,c.topLab,'svgt','middle');
+  s+=tx(213,152,'A'+PR,'svgt','middle')+tx(213,222,'B'+PR,'svgt','middle');
+  s+=lamp(467,70,to)+lamp(467,200,bo);
+  s+=tx(492,75,c.topNot)+tx(492,205,c.botLab);
+  $('#'+c.id).innerHTML=s;
+  $('#'+c.id).setAttribute('aria-label','Circuit for '+c.topNot+' = '+c.botLab+' with A='+a+' and B='+b+'. Left side gives '+to+', right side gives '+bo+'.');
+  $('#'+c.id+'-read').innerHTML='<span>'+c.topNot+' = <b>'+to+'</b></span><span>'+c.botLab+' = <b>'+bo+'</b></span><span class="'+(to===bo?'eqok':'')+'">'+(to===bo?'Equal ✓':'Not equal')+'</span>';
+  const hd=['A','B',c.topLab,c.topNot,'A'+PR,'B'+PR,c.botLab,'Equal'];
+  let h='<table class="tt"><thead><tr>'+hd.map((x,i)=>'<th'+((i===2||i===4||i===7)?' class="sep"':'')+'>'+x+'</th>').join('')+'</tr></thead><tbody>';
+  [[0,0],[0,1],[1,0],[1,1]].forEach(r=>{
+    const ra=r[0],rb=r[1],t0=c.top(ra,rb),o1=1-t0,o2=c.bot(1-ra,1-rb);
+    const cur=ra===a&&rb===b;
+    h+='<tr'+(cur?' class="cur"':'')+'>'+cell(ra)+cell(rb)+
+      cell(t0).replace('class="','class="sep ')+
+      cell(o1)+cell(1-ra).replace('class="','class="sep ')+cell(1-rb)+cell(o2)+
+      '<td class="sep '+(o1===o2?'okc':'badc')+'">'+(o1===o2?'✓':'✗')+'</td></tr>';
+  });
+  $('#'+c.id+'-tt').innerHTML=h+'</tbody></table>';
+}
+function renderDM(){LAWS.forEach(renderLaw);}
+function stopPlay(){if(DM.timer){clearInterval(DM.timer);DM.timer=null;}$('#dm-play').textContent='Play all 4 cases';}
+function syncDMSw(){setSw($('#dm-a'),DM.a);setSw($('#dm-b'),DM.b);}
+$('#dm-a').addEventListener('click',()=>{stopPlay();DM.a=1-DM.a;syncDMSw();renderDM();});
+$('#dm-b').addEventListener('click',()=>{stopPlay();DM.b=1-DM.b;syncDMSw();renderDM();});
+$('#dm-play').addEventListener('click',()=>{
+  if(DM.timer){stopPlay();return;}
+  $('#dm-play').textContent='Stop';
+  DM.timer=setInterval(()=>{DM.idx=(DM.idx+1)%4;DM.a=DM.idx>>1;DM.b=DM.idx&1;syncDMSw();renderDM();},1300);
+});
+
+/* ---------- TAB 3: expression checker ---------- */
+function tokenize(src){
+  const s=src.replace(/[’‘′]/g,"'");
+  const toks=[];let i=0;
+  const KW={AND:'AND',OR:'OR',NOT:'NOT',XOR:'XOR',NAND:'NAND',NOR:'NOR',XNOR:'XNOR'};
+  while(i<s.length){
+    const c=s[i];
+    if(/\s/.test(c)){i++;continue;}
+    if(/[A-Za-z]/.test(c)){
+      let j=i;while(j<s.length&&/[A-Za-z]/.test(s[j]))j++;
+      const word=s.slice(i,j).toUpperCase();
+      if(KW[word])toks.push({t:KW[word],s:s.slice(i,j),p:i});
+      else for(let k=i;k<j;k++)toks.push({t:'VAR',v:s[k].toUpperCase(),s:s[k],p:k});
+      i=j;continue;
+    }
+    if(c==='0'||c==='1'){toks.push({t:'CONST',v:+c,s:c,p:i});i++;continue;}
+    if('+|∨'.includes(c)){toks.push({t:'OR',s:c,p:i});i++;continue;}
+    if('.·*&∧•'.includes(c)){toks.push({t:'AND',s:c,p:i});i++;continue;}
+    if('^⊕'.includes(c)){toks.push({t:'XOR',s:c,p:i});i++;continue;}
+    if('!~¬'.includes(c)){toks.push({t:'NOT',s:c,p:i});i++;continue;}
+    if(c==="'"){toks.push({t:'POST',s:c,p:i});i++;continue;}
+    if(c==='('){toks.push({t:'LP',s:c,p:i});i++;continue;}
+    if(c===')'){toks.push({t:'RP',s:c,p:i});i++;continue;}
+    if(c==='='||c==='≡'){toks.push({t:'EQ',s:c,p:i});i+=(c==='='&&s[i+1]==='=')?2:1;continue;}
+    throw new Error('Unexpected character "'+c+'" at position '+(i+1)+'.');
+  }
+  return toks;
+}
+function parseAll(toks){
+  let i=0;
+  const peek=()=>toks[i],next=()=>toks[i++];
+  const bad=p=>new Error('Unexpected "'+p.s+'" at position '+(p.p+1)+'.');
+  function orE(){let l=xorE();while(peek()&&(peek().t==='OR'||peek().t==='NOR')){const o=next().t;const r=xorE();l={t:'bin',op:o,l:l,r:r};}return l;}
+  function xorE(){let l=andE();while(peek()&&(peek().t==='XOR'||peek().t==='XNOR')){const o=next().t;const r=andE();l={t:'bin',op:o,l:l,r:r};}return l;}
+  function andE(){
+    let l=unary();
+    for(;;){
+      const p=peek();if(!p)break;
+      if(p.t==='AND'||p.t==='NAND'){next();const r=unary();l={t:'bin',op:p.t,l:l,r:r};}
+      else if(p.t==='VAR'||p.t==='CONST'||p.t==='LP'||p.t==='NOT'){const r=unary();l={t:'bin',op:'AND',l:l,r:r};}
+      else break;
+    }
+    return l;
+  }
+  function unary(){const p=peek();if(p&&p.t==='NOT'){next();return {t:'not',a:unary()};}return postfix();}
+  function postfix(){let n=primary();while(peek()&&peek().t==='POST'){next();n={t:'not',a:n};}return n;}
+  function primary(){
+    const p=next();
+    if(!p)throw new Error('The expression ends too early. Add a variable or close a bracket.');
+    if(p.t==='VAR')return {t:'var',n:p.v};
+    if(p.t==='CONST')return {t:'const',v:p.v};
+    if(p.t==='LP'){const e=orE();const q=next();if(!q||q.t!=='RP')throw new Error('A bracket opened at position '+(p.p+1)+' is never closed.');return e;}
+    throw bad(p);
+  }
+  const e=orE();
+  if(i<toks.length)throw bad(toks[i]);
+  return e;
+}
+function collect(n,set){
+  if(n.t==='var')set.add(n.n);
+  else if(n.t==='not')collect(n.a,set);
+  else if(n.t==='bin'){collect(n.l,set);collect(n.r,set);}
+  return set;
+}
+function ev(n,env){
+  switch(n.t){
+    case 'var':return env[n.n];
+    case 'const':return n.v;
+    case 'not':return 1-ev(n.a,env);
+    default:{
+      const a=ev(n.l,env),b=ev(n.r,env);
+      switch(n.op){
+        case 'AND':return a&b; case 'NAND':return 1-(a&b);
+        case 'OR':return a|b; case 'NOR':return 1-(a|b);
+        case 'XOR':return a^b; default:return 1-(a^b);
+      }
+    }
+  }
+}
+function verdict(cls,mark,text){return '<div class="verdict '+cls+'"><span class="mk">'+mark+'</span><div>'+text+'</div></div>';}
+function runExpr(){
+  const src=$('#ex-in').value,out=$('#ex-out');
+  if(!src.trim()){out.innerHTML=verdict('info','i','Type an expression to see its truth table.');return;}
+  try{
+    const toks=tokenize(src);
+    const eq=[];toks.forEach((t,k)=>{if(t.t==='EQ')eq.push(k);});
+    if(eq.length>1)throw new Error('Use only one = sign to compare two expressions.');
+    let L,R=null;
+    if(eq.length){
+      const lt=toks.slice(0,eq[0]),rt=toks.slice(eq[0]+1);
+      if(!lt.length||!rt.length)throw new Error('Write an expression on both sides of the = sign.');
+      L=parseAll(lt);R=parseAll(rt);
+    }else L=parseAll(toks);
+    const set=collect(L,new Set());if(R)collect(R,set);
+    const vars=[...set].sort(),n=vars.length;
+    if(n>6)throw new Error('Use at most 6 different variables. This expression has '+n+'.');
+    const total=1<<n,rows=[];
+    for(let r=0;r<total;r++){
+      const env={};vars.forEach((v,k)=>{env[v]=(r>>(n-1-k))&1;});
+      rows.push({r:r,env:env,l:ev(L,env),rr:R?ev(R,env):null});
+    }
+    let v='',h='<table class="tt"><thead><tr><th>m</th>'+vars.map(x=>'<th>'+x+'</th>').join('');
+    if(R){
+      h+='<th class="sep">Left</th><th>Right</th><th class="sep">Equal</th></tr></thead><tbody>';
+      const diff=rows.filter(x=>x.l!==x.rr);
+      rows.forEach(x=>{
+        const same=x.l===x.rr;
+        h+='<tr'+(same?'':' class="bad"')+'><td class="idx">'+x.r+'</td>'+vars.map(q=>cell(x.env[q])).join('')+
+          cell(x.l).replace('class="','class="sep ')+cell(x.rr)+
+          '<td class="sep '+(same?'okc':'badc')+'">'+(same?'✓':'✗')+'</td></tr>';
+      });
+      v=diff.length===0
+        ? verdict('ok','✓','<b>Equivalent.</b> Both sides give the same output for all '+total+' input combination'+(total>1?'s':'')+'.')
+        : verdict('bad','✗','<b>Not equivalent.</b> The sides differ on '+diff.length+' of '+total+' combinations (rows '+diff.map(x=>x.r).join(', ')+', highlighted below).');
+    }else{
+      h+='<th class="sep">F</th></tr></thead><tbody>';
+      rows.forEach(x=>{h+='<tr><td class="idx">'+x.r+'</td>'+vars.map(q=>cell(x.env[q])).join('')+cell(x.l).replace('class="','class="sep ')+'</tr>';});
+      const ones=rows.filter(x=>x.l===1);
+      let extra='';
+      if(ones.length===0)extra=' F is always 0 (a contradiction).';
+      else if(ones.length===total)extra=' F is always 1 (a tautology).';
+      let sop='';
+      if(ones.length&&ones.length<total){
+        sop='<p class="sop">F = Σm('+ones.map(x=>x.r).join(', ')+')'+
+          (ones.length<=8?'<br>F = '+ones.map(x=>vars.map((q,k)=>x.env[q]?q:q+PR).join('·')).join(' + '):'')+'</p>';
+      }
+      v=verdict('info','F','F is 1 for '+ones.length+' of '+total+' input combinations.'+extra)+(sop?'<div class="panel">'+'<span class="lbl">Canonical sum of products</span>'+sop+'</div>':'');
+    }
+    out.innerHTML=v+'<div class="panel stack"><h2>Truth table</h2><div class="tt-wrap">'+h+'</tbody></table></div><p class="note">The m column is the row number when the input bits are read as a binary number, with '+(vars[0]||'the first variable')+' as the most significant bit.</p></div>';
+  }catch(err){
+    out.innerHTML=verdict('bad','!',esc(err.message));
+  }
+}
+(function initExpr(){
+  const keys=[['·','·'],['+','+'],['′',"′"],['⊕','⊕'],['(','('],[')',')'],['=','=']];
+  const kb=$('#ex-keys');
+  keys.forEach(k=>{
+    const b=document.createElement('button');b.className='key';b.type='button';b.textContent=k[0];b.setAttribute('aria-label','Insert '+k[0]);
+    b.addEventListener('click',()=>{
+      const el=$('#ex-in');const s=el.selectionStart==null?el.value.length:el.selectionStart,e=el.selectionEnd==null?s:el.selectionEnd;
+      el.value=el.value.slice(0,s)+k[1]+el.value.slice(e);el.focus();const p=s+k[1].length;el.setSelectionRange(p,p);runExpr();
+    });
+    kb.appendChild(b);
+  });
+  const clr=document.createElement('button');clr.className='key';clr.type='button';clr.textContent='Clear';clr.style.fontSize='14px';
+  clr.addEventListener('click',()=>{const el=$('#ex-in');el.value='';el.focus();runExpr();});
+  kb.appendChild(clr);
+  const ex=["(A + B)' = A' · B'","(A · B)' = A' + B'","A ⊕ B","A + A·B = A","A·(B + C) = A·B + A·C","A + A' = 1"];
+  const cb=$('#ex-chips');
+  ex.forEach(t=>{
+    const b=document.createElement('button');b.className='chip ex';b.type='button';b.textContent=t;
+    b.addEventListener('click',()=>{$('#ex-in').value=t;runExpr();});
+    cb.appendChild(b);
+  });
+  $('#ex-in').addEventListener('input',runExpr);
+})();
+
+/* ---------- tabs + hash routing ---------- */
+const TABS=['gates','de-morgan','expressions'];
+function showTab(name){
+  if(TABS.indexOf(name)<0)name='gates';
+  TABS.forEach(t=>{
+    $('#p-'+t).hidden=t!==name;
+    const b=$('#t-'+t);b.setAttribute('aria-selected',t===name?'true':'false');b.tabIndex=t===name?0:-1;
+  });
+  if(name!=='de-morgan')stopPlay();
+}
+TABS.forEach((t,i)=>{
+  const b=$('#t-'+t);
+  b.addEventListener('click',()=>{location.hash=t;showTab(t);});
+  b.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key==='ArrowLeft'){
+      const n=TABS[(i+(e.key==='ArrowRight'?1:TABS.length-1))%TABS.length];
+      location.hash=n;showTab(n);$('#t-'+n).focus();e.preventDefault();
+    }
+  });
+});
+window.addEventListener('hashchange',()=>showTab(location.hash.slice(1)));
+
+renderGates();renderDM();runExpr();
+showTab(location.hash.slice(1));
+})();
+</script>
+
+</body></html>

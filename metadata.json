@@ -1,0 +1,8 @@
+{
+  "name": "COA Interactive Lab",
+  "description": "Interactive Computer Organization and Architecture (21CSS201T) engineering laboratory with live SVG simulations across all 5 course units.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
